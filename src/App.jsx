@@ -186,6 +186,62 @@ const INITIAL_BANKS = {
     category: "visual",
     options: ["脸颊和颈部特写", "目光锁定镜头", "单色下巴托手肖像", "透过模糊的肩带拍摄", "正面特写，面部阴影交错", "斜角拍摄的原始人像", "双手置于锁骨附近的特写", "坐姿半身侧面照", "侧面微距照"]
   },
+  connectors: {
+    label: "视觉引导",
+    category: "visual",
+    options: ["手绘箭头或引导线", "虚线连接", "彩色光束", "半透明数据线"]
+  },
+  underwear_style: {
+    label: "私密内着拆解",
+    category: "item",
+    options: ["成套的蕾丝内衣裤", "运动风格纯棉内衣", "极简主义丝绸内衣", "哥特风格绑带内衣"]
+  },
+  expressions: {
+    label: "表情集",
+    category: "character",
+    options: ["疯狂、病娇、狂喜", "羞涩、躲闪、红晕", "冷漠、鄙视、高傲", "痛苦、忍耐、咬唇"]
+  },
+  texture_zoom: {
+    label: "材质特写",
+    category: "visual",
+    options: ["凌乱感与私处汗渍", "皮肤上的勒痕与红印", "丝袜的抽丝细节", "皮革的光泽与磨损"]
+  },
+  action_detail: {
+    label: "动作细节",
+    category: "action",
+    options: ["带着项圈的爬行", "双手被缚在身后的挣扎", "跪姿并展示鞋底", "拉扯领口的诱惑"]
+  },
+  special_view: {
+    label: "特殊视角",
+    category: "visual",
+    options: ["被踩在脚下的仰视视角", "从门缝中偷窥的视角", "镜子反射的背影", "监控摄像头的俯视视角"]
+  },
+  bag_content: {
+    label: "随身包袋",
+    category: "item",
+    options: ["日常通勤包或手拿包", "战术腿包", "可爱的毛绒背包", "透明材质的痛包"]
+  },
+  cosmetics: {
+    label: "美妆与护理",
+    category: "item",
+    options: ["常用的化妆品组合", "散落的口红与粉饼", "便携式补妆镜", "香水小样与护手霜"]
+  },
+  private_items: {
+    label: "私密生活物件",
+    category: "item",
+    options: ["震动棒与项圈", "手铐与眼罩", "鞭子与蜡烛", "润滑液与安全套"]
+  },
+  art_style: {
+    label: "画风",
+    category: "visual",
+    options: ["高质量的 2D 插画风格", "写实厚涂风格", "赛博朋克霓虹风格", "水彩手绘风格"]
+  },
+  background_style: {
+    label: "背景风格",
+    category: "visual",
+    options: ["漫画网格笔记本", "蓝图设计稿纸", "工业风金属背景", "极简纯色背景"]
+  },
+  // Old ones preserved for compatibility or other templates
   lens_param: {
     label: "镜头参数",
     category: "visual",
@@ -196,7 +252,6 @@ const INITIAL_BANKS = {
     category: "visual",
     options: ["大型顶置柔光箱，轻微侧向反射光", "自然窗光", "伦勃朗光", "赛博朋克霓虹光", "影棚硬光"]
   },
-  // Example 2 related
   sticker_core: {
     label: "核心贴纸",
     category: "item",
@@ -207,7 +262,6 @@ const INITIAL_BANKS = {
     category: "item",
     options: ["手绘爱心、闪光符号", "星星、月亮贴纸", "复古邮票与票据", "赛博故障风Glitch元素"]
   },
-  // Example 3 related
   action_pose: {
     label: "互动姿势",
     category: "action",
@@ -225,6 +279,19 @@ const INITIAL_DEFAULTS = {
   subject: "女性角色",
   layout_focus: "全身立绘",
   camera_angle: "脸颊和颈部特写",
+  connectors: "手绘箭头或引导线",
+  underwear_style: "成套的蕾丝内衣裤",
+  expressions: "疯狂、病娇、狂喜",
+  texture_zoom: "凌乱感与私处汗渍",
+  action_detail: "带着项圈的爬行",
+  special_view: "被踩在脚下的仰视视角",
+  bag_content: "日常通勤包或手拿包",
+  cosmetics: "常用的化妆品组合",
+  private_items: "震动棒与项圈",
+  art_style: "高质量的 2D 插画风格",
+  background_style: "漫画网格笔记本",
+  
+  // Legacy defaults
   lens_param: "85mm, f/1.8",
   lighting: "大型顶置柔光箱，轻微侧向反射光",
   sticker_core: "用户穿着甜美约会装的照片",
@@ -243,12 +310,32 @@ const DEFAULT_TEMPLATE_CONTENT = `### Role (角色设定)
 **1. 构图布局 (Layout):**
 - **中心位 (Center):** 放置角色的 {{layout_focus}}，作为视觉锚点。
 - **环绕位 (Surroundings):** 在中心人物四周空白处，有序排列拆解后的元素。
-- **视觉引导 (Connectors):** 使用手绘箭头或引导线，将周边的拆解物品与中心人物的对应部位或所属区域连接起来。
+- **视觉引导 (Connectors):** 使用{{connectors}}，将周边的拆解物品与中心人物的对应部位或所属区域连接起来。
+
+**2. 拆解内容 (Deconstruction Details):**
+- **服装分层 (Clothing Layers):** 将角色的服装拆分为单品展示
+- **私密内着拆解:** 独立展示角色的内层衣物，重点突出设计感与材质。例如： {{underwear_style}} （展示细节与剪裁）。
+- **表情集 (Expression Sheet):** 在角落绘制 3-4 个不同的头部特写，展示不同的情绪，如： {{expressions}} 。
+- **材质特写 (Texture & Zoom):** 选取关键部位进行放大特写。例如： {{texture_zoom}} ，增加对小物件材质的描绘。
+- **动作:** 绘制特殊的动作和表情，例如：{{action_detail}}，增加动作的深度刻画。
+- **特殊视角:** 绘制从某种特殊场景下拍摄的特殊视角，例如：{{special_view}}
+
+- **关联物品 (Related Items):**
+ - **随身包袋与内容物:** 绘制 {{bag_content}}，并将其“打开”，展示散落在旁的物品。
+ - **美妆与护理:** 展示 {{cosmetics}}。
+ - **私密生活物件:** 具象化角色隐藏面的物品。根据角色性格可能包括： {{private_items}}，需以一种设计图的客观视角呈现。
 
 **3. 风格与注释 (Style & Annotations):**
-- **画风:** 保持 {{art_style}}，线条干净利落。
-- **背景:** 使用 {{background}}，营造设计手稿的氛围。
-- **文字说明:** 在每个拆解元素旁模拟手写注释，简要说明材质或品牌/型号暗示。`;
+- **画风:** {{art_style}}，线条干净利落。
+- **背景:** {{background_style}}，营造设计手稿的氛围。
+- **文字说明:** 在每个拆解元素旁模拟手写注释，简要说明材质或品牌/型号暗示。
+
+### Workflow (执行逻辑)
+1. 分析主体的核心特征、穿着风格及潜在性格。
+2. 提取可拆解的一级元素（外套、鞋子、大表情）。
+3. 脑补并设计二级深度元素（她内衣穿什么风格？包里装什么？独处时用什么？）。
+4. 生成一张包含所有这些元素的组合图，确保透视准确，光影统一，注释清晰。
+5. 使用中文，高清输出。`;
 
 const TEMPLATE_PHOTO_GRID = `### Photo Grid Composition (九宫格摄影)
 编辑场景，3x3网格布局，冷灰色无缝背景。人物（面部特征与上传图片完全一致）身穿炭灰色无袖连衣裙。
@@ -506,8 +593,9 @@ const VisualEditor = React.forwardRef(({ value, onChange, banks }, ref) => {
 });
 
 // --- 组件：可折叠的词库组 ---
-const BankGroup = ({ bankKey, bank, onInsert, onDeleteOption, onAddOption, onDeleteBank, t }) => {
+const BankGroup = ({ bankKey, bank, onInsert, onDeleteOption, onAddOption, onDeleteBank, onUpdateBankCategory, t }) => {
     const [isCollapsed, setIsCollapsed] = useState(true);
+    const [isEditingCategory, setIsEditingCategory] = useState(false);
 
     const categoryId = bank.category || 'other';
     const colorKey = CATEGORIES[categoryId]?.color || 'slate';
@@ -547,13 +635,26 @@ const BankGroup = ({ bankKey, bank, onInsert, onDeleteOption, onAddOption, onDel
                         <Plus size={14} /> 
                         {!isCollapsed && <span className="text-xs font-medium">{t('insert')}</span>}
                     </button>
+                    
                     {!isCollapsed && (
-                        <button 
-                            onClick={(e) => { e.stopPropagation(); onDeleteBank(bankKey); }}
-                            className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors opacity-0 group-hover/card:opacity-100"
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        <>
+                            <button 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    setIsEditingCategory(!isEditingCategory); 
+                                }}
+                                title={t('category_label')}
+                                className={`p-1 text-gray-400 hover:${style.text} rounded transition-colors opacity-0 group-hover/card:opacity-100`}
+                            >
+                                <Settings size={14} />
+                            </button>
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); onDeleteBank(bankKey); }}
+                                className="p-1 text-gray-400 hover:text-red-500 rounded transition-colors opacity-0 group-hover/card:opacity-100"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
@@ -561,6 +662,27 @@ const BankGroup = ({ bankKey, bank, onInsert, onDeleteOption, onAddOption, onDel
             {/* Expanded Content */}
             {!isCollapsed && (
                 <div className={`p-3 pt-0 border-t ${style.border} ${style.bg}`}>
+                    
+                    {/* Category Edit Mode */}
+                    {isEditingCategory && (
+                        <div className="mb-3 pt-3 pb-3 border-b border-gray-200/50">
+                            <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">{t('category_label')}</label>
+                            <select 
+                                value={categoryId}
+                                onChange={(e) => {
+                                    onUpdateBankCategory(bankKey, e.target.value);
+                                    setIsEditingCategory(false);
+                                }}
+                                className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-white"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {Object.values(CATEGORIES).map(cat => (
+                                    <option key={cat.id} value={cat.id}>{t(cat.t_key)}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
                     <div className="flex flex-col gap-2 mb-3 mt-3">
                         {bank.options.map((opt, idx) => (
                             <div key={idx} className="group flex items-center justify-between gap-1 bg-white border border-gray-200 px-2 py-1 rounded text-xs text-gray-600 shadow-sm overflow-hidden">
@@ -606,11 +728,11 @@ const BankGroup = ({ bankKey, bank, onInsert, onDeleteOption, onAddOption, onDel
 
 const App = () => {
   // Global State with Persistence
-  const [banks, setBanks] = useStickyState(INITIAL_BANKS, "app_banks_v3"); 
-  const [defaults, setDefaults] = useStickyState(INITIAL_DEFAULTS, "app_defaults_v3");
+  const [banks, setBanks] = useStickyState(INITIAL_BANKS, "app_banks_v4"); 
+  const [defaults, setDefaults] = useStickyState(INITIAL_DEFAULTS, "app_defaults_v4");
   const [language, setLanguage] = useStickyState("cn", "app_language_v1"); 
   
-  const [templates, setTemplates] = useStickyState(INITIAL_TEMPLATES, "app_templates_v3");
+  const [templates, setTemplates] = useStickyState(INITIAL_TEMPLATES, "app_templates_v4");
   const [activeTemplateId, setActiveTemplateId] = useStickyState("tpl_default", "app_active_template_id_v2");
   
   // UI State
@@ -841,6 +963,16 @@ const App = () => {
       delete newBanks[key];
       setBanks(newBanks);
     }
+  };
+
+  const handleUpdateBankCategory = (key, newCategory) => {
+      setBanks(prev => ({
+          ...prev,
+          [key]: {
+              ...prev[key],
+              category: newCategory
+          }
+      }));
   };
 
   // --- Editor Actions ---
@@ -1180,6 +1312,7 @@ const App = () => {
                                     onDeleteOption={handleDeleteOption}
                                     onAddOption={handleAddOption}
                                     onDeleteBank={handleDeleteBank}
+                                    onUpdateBankCategory={handleUpdateBankCategory}
                                     t={t}
                                 />
                             ))}
