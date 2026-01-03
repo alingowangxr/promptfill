@@ -101,7 +101,12 @@ export const DiscoveryView = React.memo(({
               <div 
                 key={t_item.id}
                 onClick={() => {
-                  setZoomedImage(t_item.imageUrl);
+                  if (t_item.imageUrl) {
+                    setZoomedImage(t_item.imageUrl);
+                  } else {
+                    setActiveTemplateId(t_item.id);
+                    setDiscoveryView(false);
+                  }
                 }}
                 className={`break-inside-avoid mb-1 w-full rounded-lg overflow-hidden shadow-sm border active:scale-[0.98] transition-all ${isDarkMode ? 'bg-[#2A2726] border-white/5' : 'bg-white border-gray-100'}`}
               >
@@ -173,7 +178,12 @@ export const DiscoveryView = React.memo(({
                                           <div 
                                               key={t_item.id}
                                               onClick={() => {
-                                                  setZoomedImage(t_item.imageUrl);
+                                                  if (t_item.imageUrl) {
+                                                      setZoomedImage(t_item.imageUrl);
+                                                  } else {
+                                                      setActiveTemplateId(t_item.id);
+                                                      setDiscoveryView(false);
+                                                  }
                                               }}
                                               className={`cursor-pointer group transition-shadow duration-300 relative overflow-hidden rounded-xl isolate border-2 hover:shadow-[0_0_25px_rgba(251,146,60,0.6)] will-change-transform ${isDarkMode ? 'border-white/10' : 'border-white'}`}
                                           >
