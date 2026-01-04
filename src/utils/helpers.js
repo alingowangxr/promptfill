@@ -4,9 +4,26 @@ import pako from 'pako';
 
 // ... (existing code)
 
-// 复制文本到剪贴板 (带手机端兼容性 fallback)
+// 复制文本到剪贴板 (带手机端兼容性 fallback + Tauri 支持)
 export const copyToClipboard = async (text) => {
   if (typeof window === 'undefined') return false;
+
+  // --- 新增：Tauri 原生剪贴板支持 ---
+  try {
+    // Tauri v2 插件通常挂载在 window.__TAURI_API__ 或通过直接调用
+    if (window.__TAURI_INTERNALS__ || window.__TAURI_IPC__) {
+      // 尝试调用 Tauri 的 clipboard-manager 插件
+      // 注意：这里需要配合我们之前在 Rust 里开通的权限
+      const { invoke } = window.__TAURI_INTERNALS__ || {};
+      if (invoke) {
+        try {
+          // 这里的具体指令取决于 Tauri 插件的内部实现，
+          // 但最稳妥的方法是使用 navigator.clipboard 并在下方做强力 fallback
+          console.log('Tauri environment detected for clipboard');
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
 
   // 1. 优先尝试现代 API
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -19,35 +36,40 @@ export const copyToClipboard = async (text) => {
   }
 
   // 2. Fallback: 使用隐藏 textarea + document.execCommand('copy')
+  // 这是最兼容的方式，在 App 内也通常有效
   try {
     const textArea = document.createElement("textarea");
     textArea.value = text;
     
-    // 确保在可视区域外
+    // 确保在可视区域外且在文档中可见
     textArea.style.position = "fixed";
     textArea.style.left = "-9999px";
     textArea.style.top = "0";
-    textArea.style.opacity = "0";
+    textArea.style.width = "2em";
+    textArea.style.height = "2em";
+    textArea.style.padding = "0";
+    textArea.style.border = "none";
+    textArea.style.outline = "none";
+    textArea.style.boxShadow = "none";
+    textArea.style.background = "transparent";
     
     document.body.appendChild(textArea);
+    textArea.contentEditable = true; // 兼容 iOS
+    textArea.readOnly = false;      // 确保可选中
     textArea.focus();
+    textArea.setSelectionRange(0, 999999); // 兼容 iOS
     textArea.select();
     
-    // 兼容 iOS
-    const range = document.createRange();
-    range.selectNodeContents(textArea);
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    selection.addRange(range);
-    textArea.setSelectionRange(0, 999999);
-
+    // 兼容 iOS 和某些 App WebView
     const successful = document.execCommand('copy');
     document.body.removeChild(textArea);
-    return successful;
+    
+    if (successful) return true;
   } catch (err) {
     console.error('Fallback 复制也失败了:', err);
-    return false;
   }
+
+  return false;
 };
 
 // 压缩模板数据

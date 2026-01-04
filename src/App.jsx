@@ -186,6 +186,70 @@ const App = () => {
   
   const [updateNoticeType, setUpdateNoticeType] = useState(null); // 'app' | 'data' | null
   
+  // ====== 智能多源数据同步逻辑 ======
+  const DATA_SOURCES = {
+    cloud: "http://data.tanshilong.com/data", // 宝塔后端 (最高优先级)
+    static: "/data" // Vercel/本地 静态目录 (同步 Git)
+  };
+
+  useEffect(() => {
+    const syncData = async () => {
+      try {
+        console.log("[Sync] 正在检查数据更新...");
+        
+        // 1. 并行获取各源版本号
+        const results = await Promise.allSettled([
+          fetch(`${DATA_SOURCES.cloud}/version.json?t=${Date.now()}`).then(r => r.json()),
+          fetch(`${DATA_SOURCES.static}/version.json?t=${Date.now()}`).then(r => r.json())
+        ]);
+
+        let bestSource = null;
+        let maxVersion = lastAppliedDataVersion || SYSTEM_DATA_VERSION;
+
+        // 2. 比对哪个源的版本最新
+        results.forEach((res, index) => {
+          if (res.status === 'fulfilled' && res.value.dataVersion) {
+            // 这里使用简单的字符串比对或版本比对逻辑
+            if (res.value.dataVersion > maxVersion) {
+              maxVersion = res.value.dataVersion;
+              bestSource = index === 0 ? DATA_SOURCES.cloud : DATA_SOURCES.static;
+            }
+          }
+        });
+
+        // 3. 如果发现了更新的版本，执行拉取
+        if (bestSource) {
+          console.log(`[Sync] 发现更新版本 ${maxVersion}，来源: ${bestSource}`);
+          const [tplRes, bankRes] = await Promise.all([
+            fetch(`${bestSource}/templates.json`),
+            fetch(`${bestSource}/banks.json`)
+          ]);
+
+          if (tplRes.ok && bankRes.ok) {
+            const newTemplates = await tplRes.json();
+            const newBanksData = await bankRes.json();
+
+            // 批量更新状态
+            setTemplates(newTemplates.config || newTemplates);
+            setBanks(newBanksData.banks);
+            setDefaults(newBanksData.defaults);
+            setCategories(newBanksData.categories);
+            setLastAppliedDataVersion(maxVersion);
+            
+            console.log("[Sync] 数据同步成功");
+          }
+        } else {
+          console.log("[Sync] 当前数据已是最新");
+        }
+      } catch (e) {
+        console.warn("[Sync] 同步过程中出现非致命异常:", e.message);
+      }
+    };
+
+    syncData();
+  }, []);
+  // ================================
+
   // 检查系统模版更新
   // 检测数据版本更新 (模板与词库)
   useEffect(() => {
@@ -516,7 +580,9 @@ const App = () => {
     showImportTokenModal,
     importTokenValue,
     shareUrlMemo,
+    currentShareUrl,
     isGenerating,
+    isPrefetching,
     setSharedTemplateData,
     setShowShareImportModal,
     setShowShareOptionsModal,
@@ -2691,7 +2757,9 @@ const App = () => {
         onClose={() => setShowShareOptionsModal(false)}
         onCopyLink={doCopyShareLink}
         onCopyToken={handleShareToken}
+        shareUrl={currentShareUrl}
         isGenerating={isGenerating}
+        isPrefetching={isPrefetching}
         isDarkMode={isDarkMode}
         language={language}
       />

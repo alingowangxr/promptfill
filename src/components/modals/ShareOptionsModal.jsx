@@ -16,7 +16,7 @@ import { CopyIcon, Share2 } from 'lucide-react';
  * @param {boolean} props.isDarkMode - 是否暗色模式
  * @param {string} props.language - 当前语言
  */
-const ShareOptionsModal = ({ isOpen, onClose, onCopyLink, onCopyToken, isGenerating, isDarkMode, language }) => {
+const ShareOptionsModal = ({ isOpen, onClose, onCopyLink, onCopyToken, shareUrl, isGenerating, isPrefetching, isDarkMode, language }) => {
   if (!isOpen) return null;
 
   return (
@@ -53,7 +53,7 @@ const ShareOptionsModal = ({ isOpen, onClose, onCopyLink, onCopyToken, isGenerat
             >
               <div className="flex flex-col items-start ml-2 text-left">
                 <span className="text-sm font-black">
-                  {isGenerating ? (language === 'cn' ? '正在生成...' : 'Generating...') : (language === 'cn' ? '链接分享' : 'Share via Link')}
+                  {isGenerating ? (language === 'cn' ? '正在复制...' : 'Copying...') : (language === 'cn' ? '链接分享' : 'Share via Link')}
                 </span>
                 <span className={`text-[10px] font-bold opacity-50`}>
                   {language === 'cn' ? '复制完整 URL 链接' : 'Copy the full URL link'}
@@ -78,6 +78,22 @@ const ShareOptionsModal = ({ isOpen, onClose, onCopyLink, onCopyToken, isGenerat
                 </span>
               </div>
             </PremiumButton>
+
+            {/* 新增：手动复制区域 */}
+            {(shareUrl || isPrefetching) && (
+              <div className={`mt-6 p-4 rounded-2xl border ${isDarkMode ? 'bg-black/20 border-white/5' : 'bg-gray-50 border-gray-100'}`}>
+                <p className={`text-[10px] font-bold mb-2 uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                  {language === 'cn' ? '无法自动复制？请手动长按复制链接：' : 'CAN\'T AUTO-COPY? PLEASE LONG-PRESS TO COPY:'}
+                </p>
+                <div className={`text-xs font-mono break-all p-3 rounded-xl border select-all max-h-[72px] overflow-y-auto scrollbar-hide ${isDarkMode ? 'bg-black/30 border-white/10 text-gray-300' : 'bg-white border-gray-200 text-gray-600'}`}>
+                  {isPrefetching ? (
+                    <span className="opacity-50 italic">{language === 'cn' ? '短链接生成中...' : 'Generating short link...'}</span>
+                  ) : (
+                    shareUrl
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -48,13 +48,24 @@ export const useShareFunctions = (
   const [showImportTokenModal, setShowImportTokenModal] = useState(false);
   const [importTokenValue, setImportTokenValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false); // 新增：网络请求状态
+  const [prefetchedShortCode, setPrefetchedShortCode] = useState(null); // 新增：预取的短码
+  const [isPrefetching, setIsPrefetching] = useState(false); // 新增：是否正在后台取码
+
+  // 当模板改变时重置预取码
+  useEffect(() => {
+    setPrefetchedShortCode(null);
+    setIsPrefetching(false);
+  }, [activeTemplate]);
 
   // 计算分享 URL（保留作为兜底的长链接预览，但在实际分享时会尝试生成短链）
   const shareUrlMemo = useMemo(() => {
     if (!activeTemplate) return "";
 
     const compressed = compressTemplate(activeTemplate, banks, categories);
-    const base = PUBLIC_SHARE_URL || (window.location.origin + window.location.pathname);
+    // 修正：在 Tauri 环境下强制使用官网域名作为分享基准
+    // 使用更健壮的检测方式
+    const isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI_IPC__ || window.location.protocol === 'tauri:');
+    const base = PUBLIC_SHARE_URL || (isTauri ? 'https://www.aipromptfill.com' : (window.location.origin + window.location.pathname));
 
     if (!compressed) return base;
 
@@ -129,16 +140,28 @@ export const useShareFunctions = (
    * 辅助函数：向后端换取短码
    */
   const getShortCodeFromServer = useCallback(async (compressedData) => {
+    // 如果没有配置特殊的 API，或者在开发环境，可以跳过
+    if (!API_BASE_URL || API_BASE_URL.includes('example.com')) return null;
+
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3秒超时
+
       const res = await fetch(API_BASE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: compressedData })
+        body: JSON.stringify({ data: compressedData }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error(`Server returned ${res.status}`);
+      
       const result = await res.json();
       return result.code;
     } catch (e) {
-      console.error("Failed to get short code:", e);
+      console.warn("Failed to get short code (falling back to long link):", e.message);
       return null;
     }
   }, []);
@@ -350,59 +373,114 @@ export const useShareFunctions = (
    */
   const handleShareLink = useCallback(() => {
     setShowShareOptionsModal(true);
-  }, []);
+    // 开始预取短码，避免在点击复制时才请求导致剪贴板权限丢失
+    if (activeTemplate && !prefetchedShortCode && !isPrefetching) {
+      setIsPrefetching(true);
+      const compressed = compressTemplate(activeTemplate, banks, categories);
+      getShortCodeFromServer(compressed).then(code => {
+        if (code) setPrefetchedShortCode(code);
+      }).catch(() => {
+      }).finally(() => {
+        setIsPrefetching(false);
+      });
+    }
+  }, [activeTemplate, banks, categories, getShortCodeFromServer, prefetchedShortCode, isPrefetching]);
 
   /**
-   * 复制分享链接到剪贴板 (升级为短链接)
+   * 复制分享链接到剪贴板 (优先尝试短链接)
    */
   const doCopyShareLink = useCallback(async () => {
     if (!activeTemplate) return;
-    setIsGenerating(true);
-
-    const compressed = compressTemplate(activeTemplate, banks, categories);
-    const shortCode = await getShortCodeFromServer(compressed);
     
-    const base = PUBLIC_SHARE_URL || (window.location.origin + window.location.pathname);
-    // 优先使用短码，失败则降级使用压缩的长串
-    const finalShareData = shortCode || compressed;
-    const fullUrl = `${base}${base.endsWith('/') ? '' : '/'}#/share?share=${finalShareData}`;
+    setIsGenerating(true);
+    try {
+      console.log('[Share] Generating content...');
+      const compressed = compressTemplate(activeTemplate, banks, categories);
+      
+      // 优先使用预取的短码
+      let finalShareData = prefetchedShortCode;
+      
+      if (!finalShareData) {
+        console.log('[Share] No prefetched code, attempting quick fetch...');
+        // 如果没有预取到，尝试获取（限制在短时间内）
+        try {
+          // 这里可以考虑如果不愿意冒险丢失手势，直接用 compressed
+          // 但既然用户点击了，我们还是尝试一下，如果 500ms 没回来就放弃
+          const shortCode = await Promise.race([
+            getShortCodeFromServer(compressed),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800))
+          ]);
+          if (shortCode) {
+            finalShareData = shortCode;
+          } else {
+            finalShareData = compressed;
+          }
+        } catch (e) {
+          finalShareData = compressed;
+          console.warn('[Share] Short code fetch failed or timeout, using long link');
+        }
+      }
+      
+      const isTauri = !!(window.__TAURI_INTERNALS__ || window.__TAURI_IPC__ || window.location.protocol === 'tauri:');
+      const base = PUBLIC_SHARE_URL || (isTauri ? 'https://www.aipromptfill.com' : (window.location.origin + window.location.pathname));
+      const fullUrl = `${base}${base.endsWith('/') ? '' : '/'}#/share?share=${finalShareData}`;
 
-    const success = await copyToClipboard(fullUrl);
-    setIsGenerating(false);
-
-    if (success) {
-      alert(t('share_success'));
-      setShowShareOptionsModal(false);
-    } else {
-      alert(language === 'cn' ? '复制失败，请手动长按复制' : 'Copy failed, please copy manually');
+      const success = await copyToClipboard(fullUrl);
+      if (success) {
+        alert(t('share_success'));
+        setShowShareOptionsModal(false);
+      } else {
+        alert(language === 'cn' ? '复制失败，请尝试口令分享' : 'Copy failed');
+      }
+    } catch (err) {
+      console.error("Share failed:", err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setIsGenerating(false);
     }
-  }, [activeTemplate, getShortCodeFromServer, t, language, banks, categories]);
+  }, [activeTemplate, getShortCodeFromServer, t, language, banks, categories, prefetchedShortCode]);
 
   /**
-   * 复制分享口令（微信友好格式，支持短码）
-   * 格式：「Prompt分享」我的新模版：XXX\n复制整段文字，打开【提示词填空器】即可导入：\n#pf$token$
+   * 复制分享口令 (支持短码)
    */
   const handleShareToken = useCallback(async () => {
     if (!activeTemplate) return;
+
     setIsGenerating(true);
+    try {
+      const compressed = compressTemplate(activeTemplate, banks, categories);
+      
+      let finalToken = prefetchedShortCode || compressed;
+      if (!prefetchedShortCode) {
+        try {
+          const shortCode = await Promise.race([
+            getShortCodeFromServer(compressed),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 800))
+          ]);
+          if (shortCode) finalToken = shortCode;
+        } catch (e) {}
+      }
 
-    const compressed = compressTemplate(activeTemplate, banks, categories);
-    const shortCode = await getShortCodeFromServer(compressed);
-    const templateName = getLocalized(activeTemplate.name, language);
-    
-    const finalToken = shortCode || compressed;
-    const tokenText = `「Prompt分享」我的新模版：${templateName}\n复制整段文字，打开【提示词填空器】即可导入：\n#pf$${finalToken}$`;
+      const templateName = getLocalized(activeTemplate.name, language);
+      const tokenText = `「Prompt分享」我的新模版：${templateName}\n复制整段文字，打开【提示词填空器】即可导入：\n#pf$${finalToken}$`;
 
-    const success = await copyToClipboard(tokenText);
-    setIsGenerating(false);
-
-    if (success) {
-      alert(language === 'cn' ? '分享口令已复制，快去发给好友吧！' : 'Share token copied!');
-      setShowShareOptionsModal(false);
-    } else {
-      alert(language === 'cn' ? '复制失败，请尝试链接分享' : 'Copy failed, please try Link Share');
+      const success = await copyToClipboard(tokenText);
+      if (success) {
+        alert(language === 'cn' ? '分享口令已复制，快去发给好友吧！' : 'Share token copied!');
+        setShowShareOptionsModal(false);
+      }
+    } finally {
+      setIsGenerating(false);
     }
-  }, [activeTemplate, language, getShortCodeFromServer, banks, categories]);
+  }, [activeTemplate, language, getShortCodeFromServer, banks, categories, prefetchedShortCode]);
+
+  // 计算分享 URL（仅显示短码链接）
+  const currentShareUrl = useMemo(() => {
+    if (!activeTemplate || !prefetchedShortCode) return null;
+    
+    const base = 'https://www.aipromptfill.com';
+    return `${base}${base.endsWith('/') ? '' : '/'}#/share?share=${prefetchedShortCode}`;
+  }, [activeTemplate, prefetchedShortCode]);
 
   return {
     // 状态
@@ -412,7 +490,10 @@ export const useShareFunctions = (
     showImportTokenModal,
     importTokenValue,
     shareUrlMemo,
+    currentShareUrl, // 新增：当前生成的分享链接
     isGenerating,
+    isPrefetching, // 新增：暴露预取状态
+    prefetchedShortCode, // 新增：暴露预取结果
 
     // 设置状态的函数
     setSharedTemplateData,
